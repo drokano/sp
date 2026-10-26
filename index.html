@@ -1,0 +1,672 @@
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="noindex"><style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}</style></head><body>
+<title>英語医療面接 模擬患者</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+JP:wght@400;500;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: one-screen consult room — header, scrolling transcript, composer pinned to the bottom */
+:root{
+  --bg:#f3f5f4; --surface:#ffffff; --ink:#1d2624; --muted:#5d6a67; --line:#d5dcda;
+  --accent:#2f6f62; --accent-ink:#ffffff; --mint:#e2f2ea; --pt:#eef3f1; --st:#e4ece9; --note:#f7f3e8; --warn:#9a3b2c;
+  --sans:"IBM Plex Sans JP","Hiragino Sans","Noto Sans JP",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#141a19; --surface:#1c2422; --ink:#e3ebe8; --muted:#9aaaa6; --line:#2e3a37;
+  --accent:#6fb3a3; --accent-ink:#0e1514; --mint:#1f3a32; --pt:#22302d; --st:#1f2a33; --note:#2b281f; --warn:#e08a78; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#141a19; --surface:#1c2422; --ink:#e3ebe8; --muted:#9aaaa6; --line:#2e3a37;
+  --accent:#6fb3a3; --accent-ink:#0e1514; --mint:#1f3a32; --pt:#22302d; --st:#1f2a33; --note:#2b281f; --warn:#e08a78; color-scheme:dark}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.6;margin:0}
+.app{height:100%;display:flex;flex-direction:column;max-width:760px;margin:0 auto;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header{padding-block:14px 10px;border-bottom:1px solid var(--line);display:flex;gap:12px;align-items:flex-end;justify-content:space-between;flex-wrap:wrap}
+header h1{font-size:17px;margin:0;font-weight:700;text-wrap:balance}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.meta{display:flex;gap:10px;align-items:center;font-family:var(--mono);font-size:12px;color:var(--muted)}
+.chip{border:1px solid var(--line);border-radius:999px;padding:2px 10px;background:var(--surface)}
+.log{flex:1;overflow-y:auto;padding-block:14px;display:flex;flex-direction:column;gap:10px;min-height:0}
+.msg{max-width:88%;padding:9px 12px;border-radius:12px;white-space:pre-wrap;overflow-wrap:anywhere}
+.msg .who{display:block;font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
+.msg.patient{background:var(--pt);align-self:flex-start;border:1px solid var(--line)}
+.msg.student{background:var(--st);align-self:flex-end}
+.msg.finding{background:transparent;border:1px dashed var(--line);font-family:var(--mono);font-size:13px;align-self:flex-start}
+.msg.system{align-self:center;background:transparent;color:var(--muted);font-size:13px;text-align:center;max-width:100%}
+.msg.coach{align-self:stretch;max-width:100%;background:var(--note);border:1px solid var(--line);border-radius:8px}
+.msg .replay{margin-left:8px;font:inherit;font-size:12px;color:var(--accent);background:none;border:0;padding:0;cursor:pointer;text-decoration:underline}
+.intro{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:10px}
+.intro p{margin:0}
+.intro h2.sub{font-size:15px;margin:0}
+.intro.recommend{border:2px solid var(--accent)}
+.intro.recommend h2.sub{font-size:17px}
+.badge{align-self:flex-start;background:var(--accent);color:var(--accent-ink);font-size:12px;font-weight:700;letter-spacing:.06em;border-radius:999px;padding:2px 10px}
+.intro textarea{min-height:120px;font-family:var(--mono);font-size:12px;width:100%;box-sizing:border-box}
+.linkbtn{display:inline-flex;align-items:center;justify-content:center;text-decoration:none;border-radius:10px;white-space:normal;text-align:center;max-width:100%}
+.pickrow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:14px}
+.fallback summary{cursor:pointer;color:var(--muted);font-size:13px}
+.fallback{display:flex;flex-direction:column;gap:6px}
+.pastenote{margin:0;font-weight:700;font-size:15px;line-height:1.6;padding:10px 12px;border-radius:8px;background:var(--mint);color:var(--ink)}
+.patientnote{margin:0;font-size:14px;padding:8px 10px;border-radius:8px;background:var(--pt);border:1px solid var(--line)}
+@media (prefers-reduced-motion:no-preference){.patientnote.flash{animation:flash 1.2s ease-out}@keyframes flash{0%{background:var(--accent);color:var(--accent-ink)}100%{background:var(--pt);color:var(--ink)}}}
+.nextbox{border:2px solid var(--accent);border-radius:10px;padding:12px 14px;background:var(--surface)}
+.nextbox .nexthead{font-weight:700;font-size:16px;margin:0 0 6px}
+.nextbox ol{margin:0;padding-left:1.4em;font-size:17px;line-height:1.7}
+.fallback ol{margin:0;padding-left:1.3em;font-size:14px;display:flex;flex-direction:column;gap:4px}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+.fallback[open]{gap:8px}
+.intro ol{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:4px}
+.menu{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px}
+.menu a{display:block;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);text-decoration:none}
+.menu a:hover,.menu a:focus-visible{border-color:var(--accent)}
+.menu small{display:block;color:var(--muted)}
+footer{border-top:1px solid var(--line);padding-block:10px max(12px,env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:8px}
+.row{display:flex;gap:8px;align-items:flex-end}
+textarea{flex:1;min-width:0;resize:none;font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-height:46px;max-height:40vh}
+textarea:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button{font:inherit;cursor:pointer;border-radius:10px}
+.primary{background:var(--accent);color:var(--accent-ink);border:0;padding:11px 16px;font-weight:700}
+.primary:disabled{opacity:.5;cursor:default}
+.tools{display:flex;gap:6px;flex-wrap:wrap}
+.tool{background:var(--surface);color:var(--ink);border:1px solid var(--line);padding:6px 11px;font-size:13px}
+.tool[aria-pressed="false"]{color:var(--muted)}
+select.tool{max-width:100%;min-width:0}
+.tip{font-size:12px;color:var(--muted)}
+.autobar{position:relative;font-size:12px;color:var(--muted);padding-bottom:4px}
+.autobar i{position:absolute;left:0;bottom:0;height:2px;width:100%;background:var(--accent);transform-origin:left;transform:scaleX(0)}
+.autobar.run i{transition:transform var(--auto-ms) linear;transform:scaleX(1)}
+.err{color:var(--warn);font-size:13px}
+@media (prefers-reduced-motion:no-preference){.msg{animation:in .18s ease-out}@keyframes in{from{opacity:.4;transform:translateY(3px)}to{opacity:1;transform:none}}}
+</style>
+
+<div class="app">
+  <header>
+    <div>
+      <div class="eyebrow" id="eyebrow">Medical Interviewing in English</div>
+      <h1 id="title">英語医療面接 模擬患者</h1>
+    </div>
+    <div class="meta"><span class="chip" id="clock">00:00</span></div>
+  </header>
+  <main class="log" id="log" aria-live="polite"></main>
+  <footer id="footer" hidden>
+    <div class="row">
+      <textarea id="box" rows="1" placeholder="英語で話しかける（キーボードのマイクで音声入力できます）" aria-label="あなたの発言"></textarea>
+      <button class="primary" id="send">送信</button>
+    </div>
+    <div class="tools">
+      <button class="tool" id="hint">ヒント</button>
+      <button class="tool" id="present" hidden>指導医に報告する</button>
+      <button class="tool" id="end">面接を終える</button>
+      <button class="tool" id="auto" aria-pressed="true">自動送信 ON</button>
+      <button class="tool" id="voice" aria-pressed="true">音声 ON</button>
+      <button class="tool" id="restart">新しい患者</button>
+      <select class="tool" id="voicepick" aria-label="患者の声" hidden></select>
+      <button class="tool" id="trysay" type="button">声を試す</button>
+    </div>
+    <div class="autobar" id="autobar" hidden><span id="autotext">話し終えると自動で送信します</span><i id="autofill"></i></div>
+    <div class="err" id="err" role="status"></div>
+  </footer>
+</div>
+
+<script>
+const CASES = {"A":{"head":"A. Exertional chest pain. M = Michael Clark, 62, accountant. F = Margaret Clark, 66, retired teacher.","open":"Opening line: \"I get a pressure in my chest when I climb stairs.\"","brief":"Story in brief: 3 weeks of chest pressure when climbing stairs, goes away with rest.","hpi":"HPI: 3 weeks; first on train-station stairs; center of chest, heavy pressure, spreads to left arm (F: also jaw); 6/10; about 5 min, goes away with rest; 2-3 times a week, only with exertion (stairs, walking fast, carrying bags). During episodes: short of breath and sweaty. Denies: pain at rest, palpitations, fainting, cough, fever, leg swelling. Took nothing; no doctor yet. Ideas: \"my heart?\" Concern: father died of a heart attack at 68. Expectation: wants to know if the heart is OK.","hx":"PMH: high blood pressure 10 yr, high cholesterol 5 yr; never hospitalized. PSH: M hernia repair 2010; F hysterectomy 2005 for fibroids. Meds: amlodipine 5 mg once a day, atorvastatin 10 mg once a day; fish-oil capsules (only if asked about supplements). Allergies: M none; F says \"allergic to codeine\" but it only upset her stomach (side effect). F: menopause at 52.","fhsh":"FH: father heart attack, died at 68; mother 85, high blood pressure and diabetes; one brother 60, healthy. SH: lives with spouse and son; ex-smoker, quit 5 yr ago (M 20 cigarettes/day for 30 yr; F 10/day for 40 yr); M 2 beers/day, F 1 glass of wine/day; no drugs; little exercise.","ros":"ROS: only positive = occasional heartburn after big meals (only if asked). All else negative.","pe":"PE: BP 148/88, HR 76, RR 14, T 36.6, SpO2 98%; heart and lungs normal; no leg edema.","tests":"Reasonable tests: ECG, troponin, cholesterol, exercise stress test, echocardiogram.","names":{"M":"Michael Clark","F":"Margaret Clark"}},"B":{"head":"B. Wheezing. M = Robert Wilson, 45, office manager. F = Rachel Wilson, 28, graduate student.","open":"Opening line: \"I've been coughing and wheezing for three days.\"","brief":"Story in brief: 3 days of cough, wheezing and chest tightness after a cold; known asthma.","hpi":"HPI: 3 days, began after a cold last week; wheezing, chest tightness, short of breath, cough with a little clear phlegm; worse at night and early morning (woke up 2 nights); cold air and stairs make it worse; albuterol inhaler helps about 2 hours, now using it 3-4 times a day (usually a few times a month); tightness 6/10; can speak in full sentences. Denies: fever now, chest pain, coughing blood, leg swelling. Ideas: \"my asthma is acting up.\" Concern: was hospitalized once at 15. Expectation: stronger medicine.","hx":"PMH: asthma since childhood (one hospitalization at 15), hay fever. PSH: M appendectomy 2005; F none. Meds: albuterol inhaler as needed; stopped a daily steroid inhaler a year ago; loratadine OTC for hay fever (only if asked about OTC medicines); F also birth-control pill (only if asked about other medicines). Allergies: aspirin makes breathing worse; cats cause wheezing. F: last period 2 weeks ago, not pregnant.","fhsh":"FH: mother asthma; father high blood pressure. SH: M lives with wife and 2 kids; family got a cat 2 weeks ago (only if asked about pets, home or triggers). F lives with a roommate who smokes on the balcony (only if asked about smoke). Never smoker; 1-2 drinks on weekends; no drugs.","ros":"ROS: only positive = poor sleep (only if asked). All else negative.","pe":"PE: RR 22, HR 98, SpO2 95%, T 36.8; diffuse expiratory wheezes; no edema.","tests":"Reasonable tests: peak flow, spirometry, oxygen saturation, chest X-ray.","names":{"M":"Robert Wilson","F":"Rachel Wilson"}},"C":{"head":"C. Headache. F = Emily Brown, 32, graphic designer. M = Daniel Brown, 30, software engineer.","open":"Opening line: \"I've had a really bad headache since yesterday.\"","brief":"Story in brief: right-sided throbbing headache since yesterday; similar headaches since college.","hpi":"HPI: began yesterday about 3 pm at the computer; built up over an hour; right temple; throbbing; 8/10 at worst, now 6; light, noise and moving make it worse; lying in a dark room helps a little; constant since then. Similar headaches 1-2 times a month since college, usually about a day; this one is longer. Before it: zigzag flashing lights for about 20 min (only if asked about vision or warning signs). Nausea, vomited once. Denies: fever, stiff neck, weakness, numbness, trouble speaking, head injury, \"worst headache of my life\". Took ibuprofen 400 mg, little help. Ideas: \"my usual headache, but worse.\" Concern: brain tumor. Expectation: better medicine.","hx":"PMH: none. PSH: F none; M knee arthroscopy 2015. Meds: ibuprofen as needed; F birth-control pill (only if asked about other medicines). Allergies: F sulfa drug gave a rash; M none. F: period started 2 days ago.","fhsh":"FH: mother migraines; father high blood pressure. SH: lives alone; long computer hours, deadline stress, poor sleep this week; never smoker; wine socially; 3 coffees a day; no drugs.","ros":"ROS: all negative.","pe":"PE: BP 122/78, HR 72, T 36.7; normal neurologic exam; no neck stiffness.","tests":"Reasonable answer: mainly a clinical diagnosis; headache diary; imaging only if warning signs.","names":{"M":"Daniel Brown","F":"Emily Brown"}},"D":{"head":"D. Right upper abdominal pain. F = Linda Johnson, 45, bank clerk. M = Thomas Johnson, 52, restaurant manager.","open":"Opening line: \"I have terrible pain up here on the right side of my stomach.\"","brief":"Story in brief: constant right upper belly pain since last night after a fatty meal, vomiting and feeling feverish.","hpi":"HPI: since last night, about an hour after fried chicken and fries; built up over 30 min; under the right ribs, sometimes to the right shoulder blade; constant deep ache, sometimes sharper; 7/10; deep breath makes it worse; nothing helps; acetaminophen did not help. Several shorter episodes (1-2 hours) after big meals in the last 3 months. Nausea, vomited twice; felt hot and shivery this morning. Denies: yellow skin or eyes, dark urine, pale stools, diarrhea, burning urine. Ideas: F \"gallstones like my mother\"; M \"food poisoning?\" Concern: needing surgery. Expectation: wants the pain to stop.","hx":"PMH: high blood pressure. PSH: F C-section 2010; M none. Meds: amlodipine 5 mg once a day; acetaminophen OTC last night; M also OTC omeprazole sometimes for heartburn (only if asked). Allergies: F penicillin gave hives; M none. F: last period 2 weeks ago, not pregnant.","fhsh":"FH: mother had gallstones, gallbladder removed, now well; father heart attack at 70, alive. SH: lives with spouse and 2 kids; F never smoker; M ex-smoker (10/day for 20 yr, quit 10 yr ago); wine or beer on weekends; no drugs.","ros":"ROS: all negative.","pe":"PE: T 38.2, HR 102, BP 138/86, SpO2 98%; right upper quadrant tenderness, positive Murphy's sign; no jaundice.","tests":"Reasonable tests: abdominal ultrasound, blood count, liver tests, lipase, CRP.","names":{"M":"Thomas Johnson","F":"Linda Johnson"}},"E":{"head":"E. Burning urination. F = Lisa Taylor, 28, sales assistant. M = George Taylor, 68, retired engineer.","open":"Opening line: \"It burns when I pee.\"","brief":"Story in brief: burning when urinating with frequent, urgent urination for 1-2 days.","hpi":"HPI: F since yesterday evening; M 2 days. Burning when urinating; peeing every 30-60 min, urgent, small amounts; mild lower-belly ache 3/10; cloudy urine; pink urine once. Drinking lots of water (F: cranberry juice). F: similar once 2 yr ago, antibiotics helped. M: weak stream for years, now up 3 times a night. Denies: fever, chills, back or side pain, nausea, vomiting; F: vaginal discharge or itching. Ideas: \"bladder infection.\" Concern: spreading to the kidneys. Expectation: antibiotics.","hx":"PMH: F none; M enlarged prostate, type 2 diabetes. PSH: F none; M cataract surgery 2020. Meds: F birth-control pill (only if asked); M tamsulosin 0.4 mg once a day, metformin 500 mg twice a day, saw palmetto supplement (only if asked about supplements). Allergies: F sulfa drug gave hives; M none. F: last period 2 weeks ago.","fhsh":"FH: F mother diabetes; M father prostate cancer. SH: F lives with partner; M lives with wife. F never smoker; M ex-smoker (20/day for 20 yr, quit 30 yr ago). F social drinking; M 1 beer/day; no drugs. F: sexually active with one male partner, new partner since last month (only after a polite, normalized question).","ros":"ROS: all negative.","pe":"PE: T 36.9, HR 80, BP F 118/72, M 136/80; suprapubic tenderness; no CVA tenderness.","tests":"Reasonable tests: urinalysis, urine culture; F urine pregnancy test; M also kidney function.","names":{"M":"George Taylor","F":"Lisa Taylor"}}};
+
+const PATIENT_RULES = `HOW TO PLAY THE PATIENT
+- Speak natural, simple American English, 1-3 short sentences per turn. Your words are read aloud: no lists, markdown, emojis, stage directions or name labels.
+- Use everyday words only. Never use medical jargon or name a diagnosis (you may name conditions you already have, e.g. "high blood pressure").
+- Answer only what is asked. To an open question ("Tell me more") give 1-2 more details, not everything. Items marked "only if asked" are revealed only to a specific question.
+- Stay consistent with the case. If asked about something not in the case, give a brief ordinary answer that fits; never invent new important symptoms or diseases. Invent a date of birth that fits your age if asked.
+- If the student uses a medical term, ask what it means.
+- Show realistic feelings (worry, discomfort) and respond warmly to empathy.
+- If the student writes in Japanese, say "Sorry, I don't speak Japanese. Could you say that in English?"
+- If the conversation drifts off topic, answer briefly and steer back to your problem.
+- Do not praise, correct or teach the student. Stay in role.
+
+KEEPING THE CONVERSATION GOING (the student is a non-native speaker)
+- If the student's English is broken, ungrammatical or incomplete, work out the most likely meaning and answer that naturally, as a kind patient would. Never comment on grammar or pronunciation.
+- If you truly cannot tell what was meant, do not stay silent: ask one short, simple question that offers your best guess ("Sorry, do you mean when the pain started?").
+- If the student hesitates, trails off, says only "um", "uh", "sorry" or "I don't know", or seems stuck, keep the conversation moving as a real patient would: add one small detail about how you feel, mention your worry, or ask "Is there anything else you'd like to know, doctor?" Do not volunteer answers to questions that have not been asked.
+- If a note says the student has been silent for a while, gently re-engage in one short sentence ("Doctor? Is there anything else you'd like to ask me?" or "Should I tell you more about how it feels?").
+- Always reply with something; never give an empty answer.`;
+
+const FB_STYLE = `Write in Japanese; English only for example expressions. Be concise and encouraging. Plain text only: no Markdown symbols (#, *, |), no tables. Use exactly these headings on their own lines: 【できたこと】 【抜けていたこと・改善点】 【より自然な英語表現】. Under the last heading, quote 2-4 of the student's actual lines and give a more natural version. Do not grade whether any diagnosis is correct.`;
+
+const ALL = ['open','hpi','hx','fhsh','ros'];
+const MODES = {
+  main:{label:'総合練習', title:'AI模擬患者（総合練習）', fields:ALL,
+    scene:'This is a complete medical interview: chief complaint, HPI, past medical and surgical history, medications, allergies, family and social history, review of systems, and closing.',
+    focus:'the whole interview in the standard H&P order',
+    intro:['挨拶から締めくくりまで、英語で医療面接をしてください。最終試験の練習として、15分を目安にヒントを使わずに通すことを勧めます。','面接を締めくくると、患者から “What do you think is wrong with me?” と尋ねられます。簡単な問題点リストと、診断を確かめるための検査を英語で答えてください。','面接の後は講評を受けられます。さらにH&Pを英語で書いて入力すると、最終試験の評価表に沿って面接とH&Pを採点します（診断の正誤は採点しません）。'],
+    endLabel:'面接を終える', diagnosis:true,
+    task:{ask:'H&P を英語で入力してください（目安15分）。PE と Labs は “Not performed” と書いてください。', timer:15, check:`Evaluate in Japanese with ○ / △ / × and a one-line comment for each item.
+Interview: introduced self and confirmed identity; explained purpose and asked permission; began with an open question; all OPQRST elements; associated symptoms and ICE; summary and transitions; PMH, PSH, medications, allergies, FH, SH, ROS; plain language and empathy; closing.
+H&P: all components in the correct order; CC in the patient's words with duration; HPI in chronological sentences; pertinent positives and negatives; medications with dose and frequency; allergies with reaction (or NKDA); FH with ages and conditions, SH with pack-years; correct medical terms; A/P with summary, problem list and plan.
+Then list important case facts the student did not obtain, and rewrite one weak section as a model.`},
+    feedback:`Cover briefly: (1) opening (introduction, identity check, permission); (2) which OPQRST elements, associated symptoms and ICE were asked or missed; (3) which of PMH, PSH, medications (including OTC), allergies (with reaction), family history, social history and ROS were missed; (4) closing; then (5) the better English expressions. At the very end add a line 【この症例】 stating the intended diagnosis and reasonable tests.`},
+  s1:{label:'Session 1', title:'Session 1　面接の開始と主訴', fields:['open','brief'],
+    scene:'This practice covers ONLY the opening of the interview and eliciting the chief complaint. Give your opening line only after an open question such as "What brings you in today?". To "Tell me more", add 1-2 simple details from the story. To "Anything else?", say that is the main problem. If the student asks detailed questions, answer briefly.',
+    focus:'the 7 opening steps (greeting, name and role, name + date of birth, how to address, purpose/time/permission, comfort, open question) and eliciting the CC',
+    intro:['挨拶、自己紹介、本人確認（氏名と生年月日）、呼び方の確認、目的と時間の説明と同意、楽な姿勢かの確認をしてから、開かれた質問で主訴を聞いてください。'],
+    feedback:`Mark each of these 7 steps ○ or ×: greeting; name and role; two identifiers (name + date of birth); how to address the patient; purpose, time and permission; comfort; open-ended question for the CC. Also comment on "Please tell me more", "Is there anything else?", and any leading or early closed questions.`,
+    task:{ask:'この患者の主訴（CC）を英語で1行で入力してください。', check:'Correct the chief complaint: patient\'s own words, includes duration, no diagnosis, one line. Show a model CC.'}},
+  s2:{label:'Session 2', title:'Session 2　OPQRST', fields:['open','hpi'],
+    scene:'This practice covers characterizing the main symptom with OPQRST. Be strict: give each element (onset, what makes it better or worse, quality, location and spread, severity, timing) only when the student asks about it. Give a 0-10 number only if asked for a scale.',
+    focus:'asking all six OPQRST elements',
+    intro:['簡単に挨拶して主訴を聞いたら、OPQRST の6つの要素をすべて英語で質問してください。'],
+    feedback:`First give one line for each of O, P, Q, R, S, T in the form "O（発症）：聞けた／聞けていない — 学生の質問 → より自然な質問". Then one line listing important associated symptoms not asked (covered in Session 3).`},
+  s3:{label:'Session 3', title:'Session 3　随伴症状・ICE・要約', fields:['open','hpi'],
+    scene:'This practice covers the second half of the HPI: associated symptoms, pertinent negatives, your ideas, concerns and expectations, empathy and summarizing. Reveal associated symptoms, denials, and your ideas/concern/expectation only when asked, but show some worry so the student can respond with empathy. When the student summarizes, confirm it or correct any mistake.',
+    focus:'associated symptoms, pertinent negatives, ICE, empathy, summary and transition',
+    intro:['OPQRST を聞いたあと、随伴症状、患者の考え・心配・期待（ICE）を尋ね、共感の言葉を返し、最後に要約して確認してください。'],
+    feedback:`Comment on: associated symptoms asked (list important ones missed); pertinent negatives; each of Ideas, Concerns, Expectations asked or not; empathy; accuracy of the summary; transition statement.`,
+    task:{ask:'この患者の現病歴（HPI）を英語で書いて入力してください。', check:'Correct the HPI for: first sentence (age, sex, relevant history, CC with duration); chronological order; past tense and third person; all OPQRST elements; pertinent positives and negatives; what the patient took; no diagnosis. Then show a corrected version.'}},
+  s4:{label:'Session 4', title:'Session 4　PMH・PSH・Meds・Allergies', fields:['brief','hx'],
+    scene:'The HPI has already been taken. This practice covers past medical history, surgical history, medications and allergies. If asked about medical problems without examples, you may forget minor ones. Give drug names and doses only when asked; mention OTC drugs or supplements only when asked about them specifically. If you have an "allergy" that is really a side effect, call it an allergy until the student asks what happened.',
+    focus:'PMH with examples, PSH with year, medications with dose/frequency/OTC, allergies with reaction, LMP for women',
+    intro:['現病歴はすでに聞き終えた設定です。“Now I’d like to ask about your past health.” から始めて、既往歴、手術歴、内服薬、アレルギーを聞いてください。'],
+    feedback:`Comment on: conditions asked with examples; when diagnosed, treatment, control; hospitalizations; surgeries with year and complications; drug name, dose and frequency; OTC drugs and supplements; adherence; allergies with the reaction (allergy vs side effect); for women, last menstrual period and pregnancy.`,
+    task:{ask:'PMH・PSH・Medications・Allergies を英語で書いて入力してください。', check:'Correct the format (e.g. "Amlodipine 5 mg PO daily", "Penicillin (hives)", "NKDA") and the content against the case. Show a corrected version.'}},
+  s5:{label:'Session 5', title:'Session 5　家族歴・社会歴', fields:['brief','fhsh'],
+    scene:'The history up to allergies has already been taken. This practice covers family history and social history. Give smoking as cigarettes per day and years; never say "pack-years". If the student asks about drugs, alcohol amount or sexual activity WITHOUT a normalizing statement (such as "I ask all my patients these questions"), hesitate a little ("Um... why do you ask?") before answering.',
+    focus:'family history (ages, conditions, causes of death) and social history (job, living, tobacco, alcohol, drugs) with normalizing statements',
+    intro:['“Now I’d like to ask about your family’s health.” から始めて、家族歴と社会歴を聞いてください。デリケートな質問の前には一般化の前置きを使いましょう。'],
+    feedback:`Comment on: parents and siblings (age, health, cause and age of death); family diseases asked with examples; occupation; living situation; tobacco (current or past, amount, years); alcohol; drugs; whether a normalizing statement was used.`,
+    task:{ask:'FH と SH を英語で書いて入力してください。', check:'Correct FH and SH against the case and check the pack-year calculation (packs per day × years; 20 cigarettes = 1 pack). Show a corrected version.'}},
+  s6:{label:'Session 6', title:'Session 6　ROSと締めくくり', fields:['brief','ros'],
+    scene:'The history up to the social history has already been taken. This practice covers the review of systems and closing. Answer ROS questions with a short yes or no. If the case ROS is all negative, your hidden positive is: occasional mild lower back ache after sitting a long time (only if asked about back, joints or muscles). During the closing, ask once: "Is it serious, doctor?"',
+    focus:'ROS by system (general, HEENT, cardiovascular, respiratory, GI, GU, musculoskeletal, neuro, skin, psychiatric) and the 5 closing steps',
+    intro:['“Now I’m going to ask you a series of quick yes-or-no questions about the rest of your body.” から始めて ROS を行い、最後に面接を締めくくってください。'],
+    feedback:`Comment on: systems covered and missed (general, HEENT, cardiovascular, respiratory, GI, GU, musculoskeletal, neurologic, skin, psychiatric); whether the hidden positive was found and explored; the 5 closing steps (summary, anything else, questions, next steps, thanks); how the student answered "Is it serious?" (a student should explain that examination and tests will follow, not give a diagnosis).`},
+  s7:{label:'Session 7', title:'Session 7　診察の指示と症例報告', fields:['brief','pe','tests'],
+    scene:'PART 1: you are the patient being examined. Follow clear, polite instructions; if unclear, ask. After each examination step, add a separate last line starting with "Finding:" stating the relevant finding from the case. If the student asks for vital signs, give them on a "Finding:" line.',
+    attending:'You are now Dr. Smith, a friendly American attending physician, listening to the student present this patient. Reply in 1-3 short sentences. If the student has not yet given them, ask in turn for: a summary statement (age, sex, key history, chief complaint, key findings); a problem list in order of importance; tests to confirm the diagnosis. Be supportive and brief; do not lecture.',
+    focus:'asking permission, clear exam instructions, and a presentation with summary statement, problem list and tests',
+    intro:['前半：患者に診察の許可を得て、姿勢や呼吸の指示を英語で出してください。所見は “Finding:” として表示されます。','後半：「指導医に報告する」を押すと指導医 Dr. Smith に替わります。要約文、問題点リスト、必要な検査を英語で報告してください。'],
+    endLabel:'練習を終える', presenting:true,
+    feedback:`Comment on: asking permission; clarity of examination instructions; structure of the presentation (summary statement, problem list, tests); whether the tests are reasonable (compare with "Reasonable tests"). Add a model summary statement for this case.`}
+};
+
+const $ = id => document.getElementById(id);
+const log = $('log'), box = $('box');
+let speaking = false, autoOn = true, autoTimer = 0, lastVal = '';
+const AUTO_MS = 2200;
+let sample = null, mode = null, M = null, kase = null, sex = 'F', turns = [], phase = 'idle', busy = false, ctl = null, t0 = 0, timerId = 0, speakOn = true, voices = [];
+
+function el(tag, cls, text){ const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+function scroll(){ log.scrollTop = log.scrollHeight; }
+function addMsg(kind, who, text){
+  const m = el('div', 'msg ' + kind);
+  if (who) m.append(el('span', 'who', who));
+  const body = el('span', 'body', text); m.append(body);
+  if ((kind === 'patient') && 'speechSynthesis' in window){
+    const b = el('button', 'replay', '再生'); b.type = 'button'; b.onclick = () => say(body.textContent, true); m.append(b);
+  }
+  log.append(m); scroll(); return body;
+}
+function setErr(t){ $('err').textContent = t || ''; }
+const ERR = { not_granted:'Claude の使用が許可されていません。ページを開き直して許可してください。', sampling_disabled:'このアカウントでは Claude を使用できません。', rate_limited:'利用上限に達したか、混み合っています。しばらく待ってからもう一度送信してください。', session_expired:'もう一度 Claude にログインしてください。', refused:'この内容には応答できませんでした。言い方を変えて送ってください。' };
+function errText(e){ return ERR[e && e.code] || '通信に失敗しました。もう一度送信してください。'; }
+
+/* ---------- speech ---------- */
+const FEMALE = /\b(aria|jenny|ava|emma|michelle|ana|sara|nancy|jane|libby|sonia|samantha|zoe|allison|susan|karen|moira|tessa|serena|victoria|nicky|joelle|google us english|female)\b/i;
+const MALE = /\b(guy|david|mark|andrew|brian|christopher|eric|roger|steffan|davis|jason|tony|ryan|thomas|evan|tom|aaron|nathan|alex|daniel|fred|arthur|reed|male)\b/i;
+function quality(v){
+  let q = 0; const n = v.name;
+  if (/natural|neural|online/i.test(n)) q += 100;          // Edge neural voices
+  if (/premium|enhanced|siri/i.test(n)) q += 80;            // Apple downloaded voices
+  if (/google/i.test(n)) q += 60;                           // Chrome / Android
+  if (/compact|espeak|zira|david|mark|hazel|fred|albert|bad news|bahh|bells|boing|bubbles|cellos|whisper|zarvox|trinoids|junior|ralph|kathy|princess|organ|superstar|jester|wobble|good news/i.test(n)) q -= 80;
+  if (/en(-|_)us/i.test(v.lang)) q += 10;
+  if (!v.localService) q += 5;
+  return q;
+}
+function loadVoices(){
+  try { voices = speechSynthesis.getVoices().filter(v => /^en(-|_)/i.test(v.lang)); } catch(e){ voices = []; }
+  fillVoiceMenu();
+}
+function pickVoice(s){
+  if (voiceChoice){ const v = voices.find(x => x.voiceURI === voiceChoice); if (v) return v; }
+  if (!voices.length) return null;
+  const us = voices.filter(v => /en(-|_)us/i.test(v.lang)); const pool = us.length ? us : voices;
+  const want = s === 'M' ? MALE : FEMALE, other = s === 'M' ? FEMALE : MALE;
+  const ranked = pool.slice().sort((a, b) => quality(b) - quality(a));
+  const match = ranked.find(v => want.test(v.name) && !other.test(v.name));
+  return match || ranked[0];
+}
+let voiceChoice = '';
+try { voiceChoice = localStorage.getItem('sp_voice') || ''; } catch(e){}
+function fillVoiceMenu(){
+  const sel = $('voicepick'); if (!sel) return;
+  const keep = voiceChoice; sel.innerHTML = '';
+  const auto = el('option', null, '声：自動（おすすめ）'); auto.value = ''; sel.append(auto);
+  voices.filter(v => /en(-|_)us/i.test(v.lang)).sort((a, b) => quality(b) - quality(a)).forEach(v => { const o = el('option', null, v.name.replace(/^Microsoft /, '') + (quality(v) >= 50 ? ' ★' : '')); o.value = v.voiceURI; sel.append(o); });
+  sel.value = voices.some(v => v.voiceURI === keep) ? keep : '';
+  sel.hidden = !voices.length;
+}
+if ('speechSynthesis' in window){ loadVoices(); speechSynthesis.onvoiceschanged = loadVoices; }
+function say(text, force){
+  if (!('speechSynthesis' in window) || (!speakOn && !force)) return;
+  try {
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text.replace(/^Finding:.*$/gim, '').trim());
+    const s = (phase === 'attending') ? 'M' : sex; const v = pickVoice(s); if (v) u.voice = v;
+    u.lang = (v && v.lang) || 'en-US'; u.rate = 0.97;
+    speaking = true; const done = () => { if (!speaking) return; speaking = false; box.value = ''; lastVal = ''; autosize(); refocus(); };
+    u.onend = u.onerror = done; setTimeout(done, 4000 + text.length * 90);
+    speechSynthesis.speak(u);
+  } catch(e){ speaking = false; }
+}
+
+/* ---------- clock ---------- */
+function startClock(){ t0 = Date.now(); clearInterval(timerId); timerId = setInterval(tick, 1000); tick(); }
+function tick(){ const s = Math.floor((Date.now() - t0) / 1000); $('clock').textContent = String(Math.floor(s/60)).padStart(2,'0') + ':' + String(s%60).padStart(2,'0'); }
+
+/* ---------- prompts ---------- */
+function caseText(fields){
+  const c = CASES[kase]; return [c.head, ...fields.map(f => c[f])].join('\n');
+}
+function transcript(){ return turns.map(t => t.who + ': ' + t.text).join('\n'); }
+function patientPrompt(){
+  const att = phase === 'attending';
+  let p = `You are role-playing for Japanese 4th-year medical students practicing medical interviews in English.
+${att ? M.attending : 'You are the standardized patient. ' + M.scene}
+
+THE CASE (use the ${sex} version; ignore details for the other version):
+${caseText(M.fields)}
+
+${att ? '' : PATIENT_RULES}
+`;
+  if (M.diagnosis) p += `
+ENDING
+- When the student begins to close (asks "Is there anything else?", "Do you have any questions?", or thanks you) and you have not yet asked it, ask: "So, doctor, what do you think is wrong with me?"
+- After asking it, guide the student to give (1) the main problems and (2) tests to confirm the diagnosis. If they give only a diagnosis, ask "What tests will I need to find out for sure?" If only tests, ask "And what do you think the main problem is?" If stuck, ask "Is it something serious? What are the main problems?" As a layperson, never say whether the answer is right.
+- When both parts have been answered, or after three tries, say a short natural thank-you and goodbye, then write [[END]] at the very end.
+`;
+  p += `
+TRANSCRIPT SO FAR:
+${transcript()}
+
+Write ONLY ${att ? "Dr. Smith's" : "the patient's"} next reply. No name label, no quotation marks.`;
+  return p;
+}
+function clean(t){ return t.replace(/^\s*(Patient|Dr\.? Smith|Mr\.? \w+|Ms\.? \w+)\s*:\s*/i,'').replace(/^["“]|["”]$/g,'').replace(/\*/g,'').trim(); }
+
+/* ---------- flow ---------- */
+async function ask(prompt, opts, onText){
+  if (!sample) throw { code:'not_granted' };
+  ctl = new AbortController();
+  return sample(prompt, Object.assign({ cache:false, signal:ctl.signal, onText: onText ? ({text}) => onText(text) : undefined }, opts));
+}
+function setBusy(b){ busy = b; $('send').disabled = b; $('hint').disabled = b; $('end').disabled = b; $('present').disabled = b; }
+
+async function sendLine(){
+  const text = box.value.trim(); if (!text || busy) return;
+  setErr('');
+  if (phase === 'task') return submitTask(text);
+  if (phase !== 'talk' && phase !== 'attending') return;
+  cancelAuto(); box.value = ''; lastVal = ''; autosize();
+  addMsg('student', 'You', text); turns.push({ who: phase === 'attending' ? 'Student (presenting)' : 'Student', text });
+  nudges = 0;
+  await patientTurn(() => { turns.pop(); box.value = text; autosize(); });
+}
+
+async function patientTurn(onFail){
+  clearSilence();
+  setBusy(true);
+  const who = phase === 'attending' ? 'Dr. Smith' : CASES[kase].names[sex];
+  const body = addMsg('patient', who, '…');
+  try {
+    const { text: out } = await ask(patientPrompt(), { modelTier:'quick' }, t => { body.textContent = clean(t.replace('[[END]]','')); scroll(); });
+    const ended = out.includes('[[END]]');
+    let reply = clean(out.replace('[[END]]','')) || 'Sorry, doctor, could you say that again?';
+    const fm = reply.match(/\n?\s*Finding:.*$/is);
+    if (fm && mode === 's7'){ reply = reply.slice(0, fm.index).trim(); body.textContent = reply; addMsg('finding', null, fm[0].trim()); }
+    else body.textContent = reply;
+    turns.push({ who: phase === 'attending' ? 'Dr. Smith' : 'Patient', text: reply + (fm && mode==='s7' ? ' ' + fm[0].trim() : '') });
+    say(reply);
+    if (ended) finishMain(); else armSilence();
+  } catch(e){
+    body.parentElement.remove(); onFail && onFail(); setErr(errText(e));
+  } finally { setBusy(false); if (!speaking) refocus(); }
+}
+
+/* if the student says nothing for a while, the patient speaks up (at most twice in a row) */
+const SILENCE_MS = 20000; let silenceTimer = 0, nudges = 0;
+function clearSilence(){ clearTimeout(silenceTimer); silenceTimer = 0; }
+function armSilence(){
+  clearSilence();
+  if (phase !== 'talk' && phase !== 'attending') return;
+  silenceTimer = setTimeout(async () => {
+    if ((phase !== 'talk' && phase !== 'attending') || busy || box.value.trim() || nudges >= 2) return;
+    if ('speechSynthesis' in window && speechSynthesis.speaking){ armSilence(); return; }
+    nudges++;
+    turns.push({ who:'Note', text:'The student has been silent for about 20 seconds.' });
+    await patientTurn(() => { turns.pop(); });
+  }, SILENCE_MS);
+}
+
+function finishMain(){
+  clearSilence(); phase = 'done'; clearInterval(timerId);
+  addMsg('system', null, '面接は終了です。');
+  showAfter([['講評を受ける', async () => { await runFeedback(); showAfter([['H&Pを書いて採点を受ける', () => startTask()], ['新しい患者', () => newPatient()]]); }], ['H&Pを書いて採点を受ける', () => startTask()], ['新しい患者', () => newPatient()]]);
+}
+function showAfter(btns){
+  const wrap = el('div', 'tools'); wrap.style.justifyContent = 'center';
+  btns.forEach(([t, f]) => { const b = el('button', 'tool', t); b.type = 'button'; b.onclick = () => { wrap.remove(); f(); }; wrap.append(b); });
+  log.append(wrap); scroll();
+}
+
+async function endInterview(){
+  if (busy) return;
+  if (M.diagnosis && phase === 'talk'){
+    if (!turns.some(t => /what do you think is wrong/i.test(t.text))){
+      const q = 'So, doctor, what do you think is wrong with me?';
+      addMsg('patient', CASES[kase].names[sex], q); turns.push({ who:'Patient', text:q }); say(q);
+      setErr(''); return;
+    }
+    return finishMain();
+  }
+  if (phase !== 'talk' && phase !== 'attending') return;
+  clearInterval(timerId);
+  phase = 'feedback';
+  await runFeedback();
+  if (M.task) startTask(); else { phase = 'done'; showAfter([['新しい患者', () => newPatient()]]); }
+}
+
+async function runFeedback(){
+  setBusy(true);
+  const body = addMsg('coach', 'フィードバック', '講評を作成しています…（30秒ほどかかることがあります）');
+  const prompt = `You are an instructor giving feedback to a Japanese 4th-year medical student after a practice medical interview in English (${M.title}). Focus of this practice: ${M.focus || 'the whole interview'}.
+
+THE CASE (${sex} version):
+${caseText(['open','hpi','hx','fhsh','ros','pe','tests'])}
+
+TRANSCRIPT:
+${transcript()}
+
+WHAT TO COVER:
+${M.feedback}
+
+FORMAT: ${FB_STYLE}`;
+  try { const { text } = await ask(prompt, { modelTier:'default' }, t => { body.textContent = t; scroll(); }); body.textContent = text; }
+  catch(e){ body.textContent = errText(e); }
+  finally { setBusy(false); }
+}
+
+let taskStart = 0;
+function startTask(){
+  clearSilence(); phase = 'task';
+  addMsg('system', null, M.task.ask);
+  box.placeholder = 'ここに英語で入力して「送信」';
+  $('hint').hidden = true; $('end').hidden = true; $('present').hidden = true; $('auto').hidden = true; $('autobar').hidden = true; cancelAuto();
+  if (M.task.timer){ startClock(); }
+  box.focus();
+}
+async function submitTask(text){
+  box.value = ''; autosize();
+  addMsg('student', 'あなたの記載', text);
+  setBusy(true);
+  const body = addMsg('coach', '添削', '添削しています…（30秒ほどかかることがあります）');
+  clearInterval(timerId);
+  const prompt = `You are an instructor correcting a Japanese 4th-year medical student's English writing after a practice interview (${M.title}).
+
+THE CASE (${sex} version):
+${caseText(['open','hpi','hx','fhsh','ros','pe','tests'])}
+
+INTERVIEW TRANSCRIPT:
+${transcript()}
+
+STUDENT'S WRITING:
+${text}
+
+TASK:
+${M.task.check}
+Judge content only against what was actually obtained in the transcript; also list case facts the student never asked about.
+
+FORMAT: Write the comments in Japanese, plain text only, no Markdown symbols (#, *, |) and no tables. Put any corrected English version under the heading 【修正例】. Do not grade whether the diagnosis is correct.`;
+  try { const { text: out } = await ask(prompt, { modelTier:'default' }, t => { body.textContent = t; scroll(); }); body.textContent = out; }
+  catch(e){ body.textContent = errText(e); }
+  finally { setBusy(false); phase = 'done'; showAfter([['新しい患者', () => newPatient()]]); }
+}
+
+async function hint(){
+  if (busy || M.noHint || (phase !== 'talk' && phase !== 'attending')) return;
+  setBusy(true);
+  const body = addMsg('coach', 'ヒント', '…');
+  const prompt = `A Japanese medical student is practicing an English medical interview (${M.title}). Focus: ${M.focus}.
+TRANSCRIPT:
+${transcript() || '(nothing yet)'}
+
+In Japanese, give ONE short hint (1-2 sentences) about what the student should ask or do next, with one example sentence in English. Plain text only. Do not reveal the diagnosis or any answer the patient has not given.`;
+  try { const { text } = await ask(prompt, { modelTier:'quick' }, t => { body.textContent = t; scroll(); }); body.textContent = text.replace(/\*/g,''); }
+  catch(e){ body.textContent = errText(e); }
+  finally { setBusy(false); }
+}
+
+function toAttending(){
+  if (busy || phase !== 'talk') return;
+  phase = 'attending'; $('present').hidden = true;
+  turns.push({ who:'Note', text:'The examination is over. The student now presents the patient to Dr. Smith.' });
+  addMsg('system', null, '指導医 Dr. Smith に替わりました。“Dr. Smith, may I present my patient?” から始めてください。');
+}
+
+function pickCase(pref){
+  const keys = Object.keys(CASES); let last = '';
+  try { last = localStorage.getItem('sp_last') || ''; } catch(e){}
+  const opts = [];
+  keys.forEach(k => ['M','F'].forEach(s => { if (k + s !== last && (!pref || pref === s)) opts.push([k, s]); }));
+  const r = new Uint32Array(1); crypto.getRandomValues(r);
+  const [k, s] = opts[r[0] % opts.length];
+  try { localStorage.setItem('sp_last', k + s); } catch(e){}
+  kase = k; sex = s;
+}
+
+function begin(){
+  pickCase(); turns = []; log.innerHTML = '';
+  phase = 'talk';
+  $('footer').hidden = false; $('hint').hidden = !!M.noHint; $('end').hidden = false; $('end').textContent = M.endLabel || '面接を終える';
+  $('present').hidden = !M.presenting; box.placeholder = '英語で話しかける（キーボードのマイクで音声入力できます）';
+  if (mode === 's7'){
+    const c = CASES[kase];
+    addMsg('system', null, `患者：${c.names[sex]}　${c.brief.replace('Story in brief: ','')}`);
+  }
+  addMsg('system', null, mode === 's7' ? '医師として英語で自己紹介をし、診察の許可を得てから始めてください。' : '医師として英語で自己紹介をして、面接を始めてください。');
+  $('autobar').hidden = !autoOn; $('auto').hidden = false; nudges = 0;
+  startClock(); box.focus(); armSilence();
+}
+function newPatient(){ speechSynthesis && speechSynthesis.cancel && speechSynthesis.cancel(); ctl && ctl.abort(); setBusy(false); setErr(''); begin(); }
+
+function renderIntro(){
+  log.innerHTML = ''; $('footer').hidden = true;
+  const mobile = window.matchMedia('(pointer:coarse)').matches;
+  const head = el('section', 'intro');
+  M.intro.forEach(t => head.append(el('p', null, t)));
+
+  const app = el('section', 'intro recommend');
+  app.append(el('span', 'badge', 'おすすめ'));
+  app.append(el('h2', 'sub', 'スマートフォンで練習（Claudeの音声モード）'));
+  app.append(el('p', null, '自然な声で、ボタン操作なしに会話できます。会話は文字でも画面に残ります。Claudeアプリ（無料）をインストールしておくと確実です。アプリがなくても、スマートフォンのブラウザで claude.ai が開きます。'));
+  const vb = el('button', 'primary', '患者を準備する'); vb.type = 'button'; vb.onclick = () => renderVoice();
+  app.append(vb);
+
+  const page = el('section', 'intro');
+  page.append(el('h2', 'sub', 'PCで練習する場合（このページで練習）'));
+  const how = el('ol');
+  ['音声入力で英語を話してください。PC：Windows は Windowsキー＋H、Mac は fn キーを2回で起動し、入れたままにすれば話すだけで会話が続きます。スマートフォン：キーボードを英語にして、発言ごとにキーボードのマイクボタンを押します。', '話し終えて約2秒たつと自動で送信され、患者の返答が読み上げられ、画面にも表示されます。イヤホンの使用を勧めます。', M.noHint ? '終わったら「面接を終える」を押し、H&Pを入力します。' : '困ったら「ヒント」を押してください。終わったら「' + (M.endLabel || '面接を終える') + '」を押します。'].forEach(t => how.append(el('li', null, t)));
+  page.append(how);
+  page.append(el('p', 'tip', '最初の送信時に、このページが Claude を使うことの許可を求められます。応答はあなた自身の Claude アカウントの利用枠を使います。'));
+  const b = el('button', 'primary', '開始する'); b.type = 'button'; b.id = 'start'; b.onclick = () => begin();
+  page.append(b);
+  if (!sample){ const n = el('p', 'err', 'Claude に接続しています…'); n.id = 'conn'; page.append(n); }
+  if (!window.claude){
+    const pc = el('section', 'intro');
+    pc.append(el('h2', 'sub', 'PCで練習する場合'));
+    pc.append(el('p', null, 'PCでは、テキストブックのQRコードのリンク（claude.ai）をPCのブラウザで開き、メニューで同じボットを選んで「開始する」を押してください。'));
+    const a = el('a', null, 'https://claude.ai/artifact/F14CoKRnKBgLJnBHiE29SX'); a.href = 'https://claude.ai/artifact/F14CoKRnKBgLJnBHiE29SX' + location.hash; a.target = '_blank'; a.rel = 'noopener';
+    pc.append(a);
+    log.append(app, head, pc);
+  } else log.append(app, head, page);
+}
+
+function patientAge(){ const m = CASES[kase].head.match(new RegExp(sex + ' = [^,]+, (\\d+)')); return m ? m[1] : ''; }
+function greeting(){ const n = CASES[kase].names[sex]; const a = patientAge(); return `Hello, doctor. My name is ${n}${a ? ", and I'm " + a + ' years old' : ''}.`; }
+function b64(str){ return btoa(unescape(encodeURIComponent(str))); }
+function voicePrompt(){
+  const c = CASES[kase];
+  const caseBlock = [c.head, ...M.fields.map(f => c[f])].join('\n') + (M.feedback || M.task ? '\n' + ['open','hpi','hx','fhsh','ros','pe','tests'].filter(f => !M.fields.includes(f)).map(f => c[f]).join('\n') : '');
+  const role = M.attending
+    ? `PART 1: You are the patient being examined. ${M.scene} PART 2: when the student says "Dr. Smith, may I present my patient?", switch role: ${M.attending}`
+    : `You are the standardized patient, ${c.names[sex]}. ${M.scene}`;
+  let p = `[Practice setup for a medical English class. Please follow these instructions exactly for the rest of this chat.]
+
+I am a Japanese 4th-year medical student practicing a medical interview in English (${M.title}). After this message I will switch to voice conversation mode and talk to you.
+
+YOUR FIRST REPLY: reply with exactly this Japanese sentence and nothing else (it is an instruction for me, not part of the role-play): 「音声モード（入力欄の右の音波のマーク）を起動して、医師として英語で自己紹介をしてください。」
+After that, stay silent until I speak. When I introduce myself in voice mode, answer in role as the patient and let me lead the interview.
+
+YOUR ROLE
+${role}
+
+THE CASE
+The case is encoded in Base64 below so that I cannot read it in advance. Decode it silently and follow it exactly. Use the ${sex === 'M' ? 'M (male)' : 'F (female)'} version and ignore details for the other version. Never read the case aloud, never quote it, and never name the diagnosis while in role.
+<case>${b64(caseBlock)}</case>
+
+${PATIENT_RULES}
+- This is a spoken conversation: keep every reply short and natural, as a real patient would speak.
+`;
+  if (M.diagnosis) p += `
+ENDING
+- When I begin to close (I ask "Is there anything else?", "Do you have any questions?", or thank you) and you have not yet asked it, ask: "So, doctor, what do you think is wrong with me?"
+- Then guide me to give (1) the main problems and (2) tests to confirm the diagnosis. If I give only a diagnosis, ask "What tests will I need to find out for sure?" If only tests, ask "And what do you think the main problem is?" As a layperson, never say whether my answer is right.
+- When both parts are answered, or after three tries, thank me and say goodbye naturally.
+`;
+  p += M.noHint
+    ? `\nThis is a mock exam: give no hints, even if I ask.\n`
+    : `\nHINT: if I say "Time out", step out of role, give ONE short hint in simple English about what to ask next, then return to role.\n`;
+  p += `
+AFTER THE INTERVIEW
+When I say or type "End of interview" (or 「フィードバック」), step out of role for good and give feedback in writing.
+${M.feedback ? 'What to cover: ' + M.feedback + '\n' : ''}${M.task ? (M.diagnosis ? `Then ask me in Japanese whether I want to write an H&P for grading: 「H&Pを書いて採点を受ける場合は、H&Pを英語で入力してください（目安15分。PE と Labs は “Not performed” と書いてください）。」 If I send one, evaluate it: ${M.task.check}` : `Then ask me in Japanese: 「${M.task.ask}」 When I send it: ${M.task.check}`) + ' Judge content against what I actually obtained in the interview.\n' : ''}Format: ${FB_STYLE} Put any corrected English version under the heading 【修正例】.`;
+  return p;
+}
+function copyNow(text, status, okMsg){
+  let p; try { p = navigator.clipboard.writeText(text); } catch(e){ p = Promise.reject(e); }
+  p.then(() => { status.textContent = okMsg; }).catch(() => {
+    const ta = document.createElement('textarea'); ta.value = text; ta.setAttribute('readonly', ''); ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.append(ta); ta.select();
+    let ok = false; try { ok = document.execCommand('copy'); } catch(e){} ta.remove();
+    status.textContent = ok ? okMsg : '自動でコピーできませんでした。「うまくコピーできない場合」を開いて、文章をコピーしてください。';
+  });
+}
+let voiceSex = '';
+voiceSex = 'M';
+try { const v = localStorage.getItem('sp_vsex'); if (v !== null) voiceSex = v; } catch(e){}
+let voiceCount = 0;
+function renderVoice(changed){
+  pickCase(voiceSex); voiceCount++;
+  const prompt = voicePrompt();
+  log.innerHTML = ''; $('footer').hidden = true;
+  const card = el('section', 'intro');
+  card.append(el('h2', 'sub', 'Claudeアプリの音声モードで練習'));
+  const pickRow = el('label', 'pickrow');
+  pickRow.append(el('span', null, 'アプリで使っている声：'));
+  const sel = el('select', 'tool'); sel.id = 'vsex';
+  [['M', '男性の声 Mellow（男性の患者を出す）'], ['F', '女性の声 Airy（女性の患者を出す）'], ['', 'おまかせ（患者の性別はランダム）']].forEach(([v, t]) => { const o = el('option', null, t); o.value = v; sel.append(o); });
+  sel.value = voiceSex;
+  sel.onchange = () => { voiceSex = sel.value; try { localStorage.setItem('sp_vsex', voiceSex); } catch(e){} renderVoice(true); };
+  pickRow.append(sel); card.append(pickRow);
+  const steps = el('ol');
+  ['「患者情報をコピーしてClaudeを開く」を押す。患者の設定がコピーされ、Claude（アプリまたはブラウザ）が開く。初めての場合はログインする。', '新しいチャットの入力欄を長押しして「ペースト」を選び、そのまま送信する。Claude が「音声モードを起動して、医師として英語で自己紹介をしてください」と表示する。', '入力欄の右の音声モードのボタン（音波のマーク）を押し、医師として英語で自己紹介をして面接を始める。話の間で自動的に交代するので、ボタン操作は要らない。', M.noHint ? '面接を終えたら音声モードを終了し、チャットに「End of interview」と入力する。' : '困ったら “Time out” と言うとヒントがもらえる。面接を終えたら音声モードを終了し、チャットに「End of interview」と入力すると、日本語の講評が届く。' + (M.task ? (M.diagnosis ? '続けてH&Pを入力すると採点される。' : '続けて記載課題が出るので、入力すると添削される。') : '')].forEach(t => steps.append(el('li', null, t)));
+  const row = el('div', 'tools');
+  const open = el('a', 'primary linkbtn', '患者情報をコピーしてClaudeを開く'); open.href = 'https://claude.ai/new'; open.target = '_blank'; open.rel = 'noopener';
+  const ostat = el('p', 'tip', '');
+  const next = el('div', 'nextbox'); next.hidden = true;
+  next.append(el('p', 'nexthead', 'コピーしました。Claude で次の3つを行ってください'));
+  next.append(el('p', 'tip', '初めてのときは、音声モードに入ったら右上の歯車アイコンを押し、声を Mellow（男性）か Airy（女性）にしてください。どちらもアメリカ英語です。'));
+  const nl = el('ol');
+  ['新しいチャットの入力欄を長押しして「ペースト」', '送信する（「音声モードを起動して、医師として英語で自己紹介をしてください」と表示される）', '音波のマークを押し、医師として英語で自己紹介をして面接を始める'].forEach(t => nl.append(el('li', null, t)));
+  next.append(nl);
+  open.addEventListener('click', () => { next.hidden = false; copyNow(prompt, ostat, ''); try { next.scrollIntoView({ block: 'nearest' }); } catch(e){} });
+  const again = el('button', 'tool', '別の患者にする'); again.type = 'button'; again.onclick = () => renderVoice(true);
+  const back = el('button', 'tool', '戻る'); back.type = 'button'; back.onclick = () => renderIntro();
+  const pasteNote = el('p', 'pastenote', 'Claude が開いたらチャットボックスを長押しして、コピーされている患者情報をペーストして下さい');
+  row.append(again, back); card.append(open, pasteNote, row, next, ostat);
+  const patient = el('p', 'patientnote' + (changed ? ' flash' : ''), (changed ? '別の患者に入れ替えました。' : '患者を用意しました。') + '（このページで' + voiceCount + '人目／' + (sex === 'M' ? '男性' : '女性') + 'の患者）　「患者情報をコピーしてClaudeを開く」を押すと、この患者で練習できます。');
+  row.after(patient);
+  const all = el('details', 'fallback'); all.append(el('summary', null, '面接の手順をすべて見る'), steps); card.append(all);
+  const gem = el('details', 'fallback');
+  gem.append(el('summary', null, 'Claude の利用上限に達したとき：Gemini で練習する'));
+  const gsteps = el('ol');
+  ['下の「コピーして Gemini を開く」を押す（同じ患者の設定がコピーされる）。', 'Gemini の新しいチャットに貼り付けて送信する。「音声モードを起動して、医師として英語で自己紹介をしてください」と表示される。', 'Gemini Live（音声で会話するボタン）に切り替え、医師として英語で自己紹介をして面接を始める。', '終わったら Live を終了し、チャットに「End of interview」と入力すると講評が届く。'].forEach(t => gsteps.append(el('li', null, t)));
+  gem.append(gsteps);
+  const gbtn = el('a', 'tool linkbtn', 'コピーして Gemini を開く'); gbtn.href = 'https://gemini.google.com/app'; gbtn.target = '_blank'; gbtn.rel = 'noopener';
+  const gstat = el('p', 'tip', 'Gemini も無料プランには利用上限があります。Gemini の音声会話（Live）は主にスマートフォンのアプリで使えます。');
+  gbtn.addEventListener('click', () => copyNow(prompt, gstat, 'コピーしました。Gemini の新しいチャットに貼り付けて送信してください。'));
+  gem.append(gbtn, gstat); card.append(gem);
+
+  card.append(el('p', 'tip', 'Claude の声は、音声モードの画面の右上にある歯車アイコンから、アメリカ英語の Mellow（男性）か Airy（女性）を選んでください。上でアプリと同じ声を選んでおくと、その性別の患者が出て、声と性別がそろいます。患者の声が日本語訛りに聞こえるときは、音声モードで “Please speak in English.” と話しかけてください。'));
+  const fb = el('details', 'fallback');
+  fb.append(el('summary', null, 'うまくコピーできない場合'));
+  fb.append(el('p', 'tip', '下の「コピー」を押すか、枠内の文章を長押しして全選択・コピーし、Claude の新しいチャットに貼り付けて送信してください。症例は符号化されているので、貼り付けても読めません。'));
+  const copy = el('button', 'tool', 'コピー'); copy.type = 'button';
+  const status = el('p', 'tip', '');
+  const ta = el('textarea'); ta.id = 'vprompt'; ta.readOnly = true; ta.rows = 4; ta.value = prompt; ta.setAttribute('aria-label', 'Claudeに送る設定');
+  copy.onclick = async () => {
+    try { await navigator.clipboard.writeText(prompt); status.textContent = 'コピーしました。Claudeアプリの新しいチャットに貼り付けて送信してください。'; }
+    catch(e){ ta.focus(); ta.select(); status.textContent = '自動でコピーできませんでした。枠内の文章が選択されているので、そのままコピーしてください。'; }
+  };
+  fb.append(copy, status, ta); card.append(fb);
+  log.append(card); log.scrollTop = 0;
+}
+function renderMenu(){
+  $('title').textContent = '英語医療面接 模擬患者'; $('eyebrow').textContent = 'Medical Interviewing in English';
+  log.innerHTML = '';
+  const card = el('section', 'intro');
+  card.append(el('p', null, '練習するボットを選んでください。各コマのリンク（QRコード）からは、そのボットが直接開きます。'));
+  const menu = el('div', 'menu');
+  Object.entries(MODES).forEach(([k, m]) => { const a = el('a'); a.href = '#' + k; a.append(el('span', null, m.label)); a.append(el('small', null, m.title.replace(/^Session \d　/, ''))); menu.append(a); });
+  card.append(menu); log.append(card);
+}
+function route(){
+  let h = (location.hash || '').slice(1); if (h === 's8') h = 'main';
+  ctl && ctl.abort(); clearInterval(timerId); phase = 'idle';
+  if (MODES[h]){ mode = h; M = MODES[h]; $('title').textContent = M.title; $('eyebrow').textContent = M.label; renderIntro(); }
+  else { mode = null; M = null; renderMenu(); $('footer').hidden = true; }
+}
+
+function autosize(){ box.style.height = 'auto'; box.style.height = Math.min(box.scrollHeight, window.innerHeight * 0.4) + 'px'; }
+function refocus(){ if ((phase === 'talk' || phase === 'attending') && document.activeElement !== box){ try { box.focus({ preventScroll:true }); } catch(e){} } }
+function cancelAuto(){ clearTimeout(autoTimer); autoTimer = 0; $('autobar').classList.remove('run'); $('autotext').textContent = '話し終えると自動で送信します'; }
+function onBoxChange(){
+  autosize();
+  if (box.value === lastVal) return; lastVal = box.value; if (box.value.trim()) clearSilence(); else armSilence();
+  cancelAuto();
+  if (!autoOn || busy || (phase !== 'talk' && phase !== 'attending') || !box.value.trim()) return;
+  if (speakOn && 'speechSynthesis' in window && speechSynthesis.speaking){ box.value = ''; lastVal = ''; autosize(); return; }  // ignore what the microphone picks up while the patient is talking
+  const bar = $('autobar'); void bar.offsetWidth; bar.classList.add('run'); $('autotext').textContent = '送信します…（話し続けると延長）';
+  autoTimer = setTimeout(() => { cancelAuto(); if (box.value.trim()) sendLine(); }, AUTO_MS);
+}
+document.documentElement.style.setProperty('--auto-ms', AUTO_MS + 'ms');
+box.addEventListener('input', onBoxChange);
+setInterval(onBoxChange, 400);  // some dictation tools insert text without an input event
+$('auto').onclick = () => { autoOn = !autoOn; $('auto').setAttribute('aria-pressed', String(autoOn)); $('auto').textContent = autoOn ? '自動送信 ON' : '自動送信 OFF'; $('autobar').hidden = !autoOn; cancelAuto(); };
+box.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing && window.matchMedia('(pointer:fine)').matches){ e.preventDefault(); sendLine(); } });
+$('send').onclick = sendLine;
+$('hint').onclick = hint;
+$('end').onclick = endInterview;
+$('present').onclick = toAttending;
+$('restart').onclick = newPatient;
+$('voice').onclick = () => { speakOn = !speakOn; $('voice').setAttribute('aria-pressed', String(speakOn)); $('voice').textContent = speakOn ? '音声 ON' : '音声 OFF'; if (!speakOn) try { speechSynthesis.cancel(); } catch(e){} };
+$('voicepick').onchange = e => { voiceChoice = e.target.value; try { localStorage.setItem('sp_voice', voiceChoice); } catch(err){} say('Hello, doctor. Thank you for seeing me today.', true); };
+$('trysay').onclick = () => say('Hello, doctor. Thank you for seeing me today.', true);
+window.addEventListener('hashchange', route);
+route();
+
+(async () => {
+  try { sample = window.claude && window.claude.use ? await window.claude.use('sample') : null; } catch(e){ sample = null; }
+  const c = $('conn');
+  if (c) c.textContent = sample ? '' : 'Claude に接続できません。claude.ai にログインした状態で、このリンクを開いてください。';
+})();
+</script>
+
+</body></html>

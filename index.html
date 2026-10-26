@@ -513,11 +513,14 @@ function patientAge(){ const m = CASES[kase].head.match(new RegExp(sex + ' = [^,
 function greeting(){ const n = CASES[kase].names[sex]; const a = patientAge(); return `Hello, doctor. My name is ${n}${a ? ", and I'm " + a + ' years old' : ''}.`; }
 function b64(str){ return btoa(unescape(encodeURIComponent(str))); }
 function voicePrompt(){
-  const c = CASES[kase];
-  const caseBlock = [c.head, ...M.fields.map(f => c[f])].join('\n') + (M.feedback || M.task ? '\n' + ['open','hpi','hx','fhsh','ros','pe','tests'].filter(f => !M.fields.includes(f)).map(f => c[f]).join('\n') : '');
+  const blockOf = k => { const c = CASES[k]; return [c.head, ...M.fields.map(f => c[f])].join('\n') + (M.feedback || M.task ? '\n' + ['open','hpi','hx','fhsh','ros','pe','tests'].filter(f => !M.fields.includes(f)).map(f => c[f]).join('\n') : ''); };
+  const rest = Object.keys(CASES).filter(k => k !== kase);
+  for (let i = rest.length - 1; i > 0; i--){ const r = new Uint32Array(1); crypto.getRandomValues(r); const j = r[0] % (i + 1); [rest[i], rest[j]] = [rest[j], rest[i]]; }
+  const order = [kase, ...rest];
+  const caseTags = order.map((k, i) => `<case n="${i + 1}">${b64(blockOf(k))}</case>`).join('\n');
   const role = M.attending
     ? `PART 1: You are the patient being examined. ${M.scene} PART 2: when the student says "Dr. Smith, may I present my patient?", switch role: ${M.attending}`
-    : `You are the standardized patient, ${c.names[sex]}. ${M.scene}`;
+    : `You are the standardized patient in the current case (use the name given for the ${sex === 'M' ? 'M' : 'F'} version). ${M.scene}`;
   let p = `[Practice setup for a medical English class. Please follow these instructions exactly for the rest of this chat.]
 
 I am a Japanese 4th-year medical student practicing a medical interview in English (${M.title}). After this message I will switch to voice conversation mode and talk to you.
@@ -528,9 +531,9 @@ After that, stay silent until I speak. When I introduce myself in voice mode, an
 YOUR ROLE
 ${role}
 
-THE CASE
-The case is encoded in Base64 below so that I cannot read it in advance. Decode it silently and follow it exactly. Use the ${sex === 'M' ? 'M (male)' : 'F (female)'} version and ignore details for the other version. Never read the case aloud, never quote it, and never name the diagnosis while in role.
-<case>${b64(caseBlock)}</case>
+THE CASES
+There are ${order.length} cases below, encoded in Base64 so that I cannot read them in advance. Start with case 1. Decode only the current case, silently, and follow it exactly. Always use the ${sex === 'M' ? 'M (male)' : 'F (female)'} version and ignore details for the other version. Never read a case aloud, never quote it, and never name the diagnosis while in role.
+${caseTags}
 
 ${PATIENT_RULES}
 - This is a spoken conversation: keep every reply short and natural, as a real patient would speak.
@@ -546,8 +549,12 @@ ENDING
     : `\nHINT: if I say "Time out", step out of role, give ONE short hint in simple English about what to ask next, then return to role.\n`;
   p += `
 AFTER THE INTERVIEW
-When I say or type "End of interview" (or 「フィードバック」), step out of role for good and give feedback in writing.
-${M.feedback ? 'What to cover: ' + M.feedback + '\n' : ''}${M.task ? (M.diagnosis ? `Then ask me in Japanese whether I want to write an H&P for grading: 「H&Pを書いて採点を受ける場合は、H&Pを英語で入力してください（目安15分。PE と Labs は “Not performed” と書いてください）。」 If I send one, evaluate it: ${M.task.check}` : `Then ask me in Japanese: 「${M.task.ask}」 When I send it: ${M.task.check}`) + ' Judge content against what I actually obtained in the interview.\n' : ''}Format: ${FB_STYLE} Put any corrected English version under the heading 【修正例】.`;
+When I say or type "End of interview" or "End of encounter" (or 「フィードバック」), step out of role and give feedback in writing.
+${M.feedback ? 'What to cover: ' + M.feedback + '\n' : ''}${M.task ? (M.diagnosis ? `Then ask me in Japanese whether I want to write an H&P for grading: 「H&Pを書いて採点を受ける場合は、H&Pを英語で入力してください（目安15分。PE と Labs は “Not performed” と書いてください）。」 If I send one, evaluate it: ${M.task.check}` : `Then ask me in Japanese: 「${M.task.ask}」 When I send it: ${M.task.check}`) + ' Judge content against what I actually obtained in the interview.\n' : ''}Format: ${FB_STYLE} Put any corrected English version under the heading 【修正例】.
+At the very end of the feedback add this line: 「別の患者で練習するときは “New patient” と言うか入力してください。」
+
+NEW PATIENT
+When I say or type "New patient" (at any time), drop the current patient completely and move to the next case (case 2, then 3, and so on; after the last case go back to case 1). Reply only with this Japanese sentence: 「新しい患者を用意しました。医師として英語で自己紹介をしてください。」 Then stay silent until I speak, and play the new patient with all the rules above, including the ending and the feedback. Never reuse details from an earlier patient.`;
   return p;
 }
 function copyNow(text, status, okMsg){
@@ -576,7 +583,7 @@ function renderVoice(changed){
   sel.onchange = () => { voiceSex = sel.value; try { localStorage.setItem('sp_vsex', voiceSex); } catch(e){} renderVoice(true); };
   pickRow.append(sel); card.append(pickRow);
   const steps = el('ol');
-  ['「患者情報をコピーしてClaudeを開く」を押す。患者の設定がコピーされ、Claude（アプリまたはブラウザ）が開く。初めての場合はログインする。', '新しいチャットの入力欄を長押しして「ペースト」を選び、そのまま送信する。Claude が「音声モードを起動して、医師として英語で自己紹介をしてください」と表示する。', '入力欄の右の音声モードのボタン（音波のマーク）を押し、医師として英語で自己紹介をして面接を始める。話の間で自動的に交代するので、ボタン操作は要らない。', M.noHint ? '面接を終えたら音声モードを終了し、チャットに「End of interview」と入力する。' : '困ったら “Time out” と言うとヒントがもらえる。面接を終えたら音声モードを終了し、チャットに「End of interview」と入力すると、日本語の講評が届く。' + (M.task ? (M.diagnosis ? '続けてH&Pを入力すると採点される。' : '続けて記載課題が出るので、入力すると添削される。') : '')].forEach(t => steps.append(el('li', null, t)));
+  ['「患者情報をコピーしてClaudeを開く」を押す。患者の設定がコピーされ、Claude（アプリまたはブラウザ）が開く。初めての場合はログインする。', '新しいチャットの入力欄を長押しして「ペースト」を選び、そのまま送信する。Claude が「音声モードを起動して、医師として英語で自己紹介をしてください」と表示する。', '入力欄の右の音声モードのボタン（音波のマーク）を押し、医師として英語で自己紹介をして面接を始める。話の間で自動的に交代するので、ボタン操作は要らない。', M.noHint ? '面接を終えたら音声モードを終了し、チャットに「End of interview」と入力する。' : '困ったら “Time out” と言うとヒントがもらえる。面接を終えたら音声モードを終了し、チャットに「End of interview」と入力すると、日本語の講評が届く。' + (M.task ? (M.diagnosis ? '続けてH&Pを入力すると採点される。' : '続けて記載課題が出るので、入力すると添削される。') : ''), '別の患者で続けるときは、同じチャットで “New patient” と言うか入力する。新しい患者に入れ替わる（全部で5人）。'].forEach(t => steps.append(el('li', null, t)));
   const row = el('div', 'tools');
   const open = el('a', 'primary linkbtn', '患者情報をコピーしてClaudeを開く'); open.href = 'https://claude.ai/new'; open.target = '_blank'; open.rel = 'noopener';
   const ostat = el('p', 'tip', '');

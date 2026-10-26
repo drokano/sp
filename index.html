@@ -552,6 +552,7 @@ AFTER THE INTERVIEW
 When I say or type "End of interview" or "End of encounter" (or 「フィードバック」), step out of role and give feedback in writing.
 ${M.feedback ? 'What to cover: ' + M.feedback + '\n' : ''}${M.task ? (M.diagnosis ? `Then ask me in Japanese whether I want to write an H&P for grading: 「H&Pを書いて採点を受ける場合は、H&Pを英語で入力してください（目安15分。PE と Labs は “Not performed” と書いてください）。」 If I send one, evaluate it: ${M.task.check}` : `Then ask me in Japanese: 「${M.task.ask}」 When I send it: ${M.task.check}`) + ' Judge content against what I actually obtained in the interview.\n' : ''}Format: ${FB_STYLE} Put any corrected English version under the heading 【修正例】.
 At the very end of the feedback add this line: 「別の患者で練習するときは “New patient” と言うか入力してください。」
+If I say or type "Stop" while you are giving feedback, stop the feedback at once and reply only: 「講評を中断しました。別の患者で練習するときは “New patient” と言ってください。」
 
 NEW PATIENT
 When I say or type "New patient" (at any time), drop the current patient completely and move to the next case (case 2, then 3, and so on; after the last case go back to case 1). Reply only with this Japanese sentence: 「新しい患者を用意しました。医師として英語で自己紹介をしてください。」 Then stay silent until I speak, and play the new patient with all the rules above, including the ending and the feedback. Never reuse details from an earlier patient.`;
@@ -583,7 +584,7 @@ function renderVoice(changed){
   sel.onchange = () => { voiceSex = sel.value; try { localStorage.setItem('sp_vsex', voiceSex); } catch(e){} renderVoice(true); };
   pickRow.append(sel); card.append(pickRow);
   const steps = el('ol');
-  ['「患者情報をコピーしてClaudeを開く」を押す。患者の設定がコピーされ、Claude（アプリまたはブラウザ）が開く。初めての場合はログインする。', '新しいチャットの入力欄を長押しして「ペースト」を選び、そのまま送信する。Claude が「音声モードを起動して、医師として英語で自己紹介をしてください」と表示する。', '入力欄の右の音声モードのボタン（音波のマーク）を押し、医師として英語で自己紹介をして面接を始める。話の間で自動的に交代するので、ボタン操作は要らない。', M.noHint ? '面接を終えたら音声モードを終了し、チャットに「End of interview」と入力する。' : '困ったら “Time out” と言うとヒントがもらえる。面接を終えたら音声モードを終了し、チャットに「End of interview」と入力すると、日本語の講評が届く。' + (M.task ? (M.diagnosis ? '続けてH&Pを入力すると採点される。' : '続けて記載課題が出るので、入力すると添削される。') : ''), '別の患者で続けるときは、同じチャットで “New patient” と言うか入力する。新しい患者に入れ替わる（全部で5人）。'].forEach(t => steps.append(el('li', null, t)));
+  ['「患者情報をコピーしてClaudeを開く」を押す。患者の設定がコピーされ、Claude（アプリまたはブラウザ）が開く。初めての場合はログインする。', '新しいチャットの入力欄を長押しして「ペースト」を選び、そのまま送信する。Claude が「音声モードを起動して、医師として英語で自己紹介をしてください」と表示する。', '入力欄の右の音声モードのボタン（音波のマーク）を押し、医師として英語で自己紹介をして面接を始める。話の間で自動的に交代するので、ボタン操作は要らない。', M.noHint ? '面接を終えたら音声モードを終了し、チャットに「End of interview」と入力する。' : '困ったら “Time out” と言うとヒントがもらえる。面接を終えたら音声モードを終了し、チャットに「End of interview」と入力すると、日本語の講評が届く。' + (M.task ? (M.diagnosis ? '続けてH&Pを入力すると採点される。' : '続けて記載課題が出るので、入力すると添削される。') : ''), '講評を途中で止めるときは “Stop” と言う（止まらないときは音声モードを終了する。講評は文字で画面に残る）。別の患者で続けるときは、同じチャットで “New patient” と言うか入力する。新しい患者に入れ替わる（全部で5人）。'].forEach(t => steps.append(el('li', null, t)));
   const row = el('div', 'tools');
   const open = el('a', 'primary linkbtn', '患者情報をコピーしてClaudeを開く'); open.href = 'https://claude.ai/new'; open.target = '_blank'; open.rel = 'noopener';
   const ostat = el('p', 'tip', '');
